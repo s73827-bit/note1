@@ -135,6 +135,30 @@ test.describe('예약 등록·수정', () => {
 });
 
 test.describe('예약 상태', () => {
+  test('취소·노쇼 예약 자리를 누르면 그 시간에 새 예약을 넣는다', async ({ page }) => {
+    await openApp(page, { data: sample({ reservations: [res('a', 'd1', TODAY, '10:00', { status: 'canceled' }), res('b', 'd2', TODAY, '14:00', { status: 'noshow' })] }) });
+    await tab(page, 'calendar');
+    for (const [id, start] of [['a', '10:00'], ['b', '14:00']]) {
+      const box = await block(page, id).boundingBox();
+      await page.mouse.click(box.x + box.width - 10, box.y + 8); // 블록의 오른쪽 위(글자 없는 곳)
+      await expect(page.locator('#res-dlg')).toBeVisible();
+      await expect(page.locator('#res-dlg-title')).toHaveText('예약 추가');
+      await expect(page.locator('#res-start')).toHaveValue(start);
+      await page.click('#res-cancel');
+    }
+  });
+
+  test('취소된 예약은 시간 글자를 눌러 열고 예정으로 되돌릴 수 있다', async ({ page }) => {
+    await openApp(page, { data: sample({ reservations: [res('a', 'd1', TODAY, '10:00', { status: 'canceled' })] }) });
+    await tab(page, 'calendar');
+    await block(page, 'a').locator('b').click();
+    await expect(page.locator('#res-view-body h2')).toContainText('취소');
+    await resAction(page, 'scheduled');
+    await resAction(page, 'close');
+    await block(page, 'a').click({ position: { x: 20, y: 30 } }); // 예정이 되면 블록 어디를 눌러도 열림
+    await expect(page.locator('#res-view-dlg')).toBeVisible();
+  });
+
   test('취소·노쇼·예정으로 상태를 바꾼다', async ({ page }) => {
     await openApp(page, { data: sample({ reservations: [res('a', 'd1', TODAY, '10:00')] }) });
     await tab(page, 'calendar');

@@ -233,6 +233,15 @@ function renderPricing() {
     </div>`;
 }
 
+// 경계를 고친 뒤 표 머리 「~3kg」만 새로 씁니다.
+// 화면 전체를 다시 그리면 바로 누른 「저장」 버튼이 바뀌어 클릭이 사라집니다.
+function updateBracketHeads() {
+  const brackets = priceDraft.brackets.map(Number);
+  document.querySelectorAll('#pricing-body .pt-table:not(.pt-extras-table) thead th').forEach((th, i, all) => {
+    if (i > 0 && i < all.length - 1) th.textContent = bracketLabel(i - 1, brackets);
+  });
+}
+
 function markPriceDirty() {
   priceDirty = true;
   const note = $('#pricing-body .pt-dirty');
@@ -319,7 +328,7 @@ function initPricing() {
   const body = $('#pricing-body');
   body.addEventListener('input', onPricingInput);
   // 경계를 다 고치면(포커스가 빠지면) 표 머리 「~3kg」을 새로 그립니다.
-  body.addEventListener('change', (e) => { if (e.target.matches('.pt-bracket')) renderPricing(); });
+  body.addEventListener('change', (e) => { if (e.target.matches('.pt-bracket')) updateBracketHeads(); });
   body.addEventListener('click', onPricingClick);
   // 기록 폼의 고르기 칸(고객 화면·예약 완료 기록창)
   document.addEventListener('change', (e) => {

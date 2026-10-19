@@ -213,6 +213,10 @@ dialog::backdrop { background: rgba(20, 24, 40, .45); }
 .res-block b { color: var(--st); }
 .res-block span { display: block; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .res-block.st-canceled { opacity: .6; text-decoration: line-through; }
+/* 취소·노쇼는 자리를 비운 것: 블록을 눌러도 아래 빈 칸이 눌려 새 예약을 넣고,
+   예약을 열 때는 시간 글자(밑줄)를 누릅니다. */
+.res-block.st-canceled, .res-block.st-noshow { pointer-events: none; opacity: .6; }
+.res-block.st-canceled b, .res-block.st-noshow b { pointer-events: auto; cursor: pointer; text-decoration: underline; }
 
 /* ---------- 예약 / 기록 창 ---------- */
 .dlg-form { padding: 18px; max-height: 88vh; overflow-y: auto; }
