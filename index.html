@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>미용샵 고객관리</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>🐶 미용샵 고객관리</h1>
+    <nav class="tabs">
+      <button type="button" class="tab active" data-tab="customers">고객</button>
+      <button type="button" class="tab" data-tab="calendar">예약</button>
+      <button type="button" class="tab" data-tab="stats">매출</button>
+      <button type="button" class="tab" data-tab="pricing">요금표</button>
+      <button type="button" class="tab" data-tab="notify">알림 <span class="badge" hidden></span></button>
+    </nav>
+    <div class="top-actions">
+      <button id="btn-new" class="primary" type="button">+ 새 고객 등록</button>
+      <details class="menu">
+        <summary>백업 ▾</summary>
+        <div class="menu-items">
+          <button id="btn-backup" type="button">백업 저장</button>
+          <button id="btn-restore" type="button">백업 불러오기</button>
+          <hr>
+          <button id="btn-photo-backup" type="button">사진 백업 저장</button>
+          <button id="btn-photo-restore" type="button">사진 불러오기</button>
+          <hr>
+          <button id="btn-csv" type="button">미용기록 CSV</button>
+        </div>
+      </details>
+      <input id="file-restore" type="file" accept="application/json,.json" hidden>
+      <input id="file-photo-restore" type="file" accept="application/json,.json" hidden>
+      <input id="photo-file" type="file" accept="image/*" hidden>
+    </div>
+  </header>
+
+  <div id="notify-banner" class="notify-banner" role="status" hidden></div>
+
+  <main id="view-customers" class="layout">
+    <aside class="side">
+      <input id="search" type="search" placeholder="반려견·보호자·연락처 검색" autocomplete="off">
+      <p id="count" class="muted"></p>
+      <ul id="list" class="list"></ul>
+    </aside>
+    <section id="detail" class="detail"></section>
+  </main>
+
+  <main id="view-calendar" class="cal-view" hidden>
+    <div class="cal-toolbar">
+      <div class="btns">
+        <button type="button" id="cal-prev" aria-label="이전 주">◀</button>
+        <button type="button" id="cal-today">이번 주</button>
+        <button type="button" id="cal-next" aria-label="다음 주">▶</button>
+      </div>
+      <b id="cal-range"></b>
+      <button type="button" id="cal-new" class="primary">+ 예약 추가</button>
+    </div>
+    <p class="muted">빈 칸을 누르면 그 시간으로 예약을 추가합니다.
+      <span class="legend"><i class="st-scheduled"></i>예정 <i class="st-done"></i>완료 <i class="st-noshow"></i>노쇼 <i class="st-canceled"></i>취소</span>
+    </p>
+    <div class="cal-scroll"><div id="cal"></div></div>
+  </main>
+
+  <main id="view-stats" class="stats-view" hidden>
+    <div class="cal-toolbar">
+      <div class="btns">
+        <button type="button" id="stats-prev" aria-label="이전 달">◀</button>
+        <button type="button" id="stats-today">이번 달</button>
+        <button type="button" id="stats-next" aria-label="다음 달">▶</button>
+      </div>
+      <b id="stats-label"></b>
+    </div>
+    <p class="muted">미용 기록의 금액을 기준으로 계산합니다. (기록이 없는 예약은 포함되지 않아요)</p>
+    <div id="stats-body"></div>
+    <div class="chart-tip" role="status" hidden></div>
+  </main>
+
+  <main id="view-pricing" class="pricing-view" hidden>
+    <div id="pricing-body"></div>
+    <div id="mb-products"></div>
+  </main>
+
+  <main id="view-notify" class="notify-view" hidden>
+    <div id="notify-body"></div>
+  </main>
+
+  <footer class="foot">
+    데이터는 이 브라우저에만 저장됩니다(서버 전송 없음). 브라우저 데이터를 지우면 사라지니 주기적으로 「백업 저장」을 해주세요.
+    사진은 「사진 백업 저장」으로 따로 받으세요.
+    연락처가 들어 있으므로 백업·CSV 파일은 다른 사람에게 공유하지 마세요.
+  </footer>
+
+  <dialog id="dlg">
+    <form id="form" autocomplete="off">
+      <h2 id="dlg-title">새 고객 등록</h2>
+
+      <fieldset>
+        <legend>보호자</legend>
+        <label>이름 *<input id="o-name" required maxlength="30"></label>
+        <label>연락처 *<input id="o-phone" type="tel" required maxlength="20" placeholder="010-0000-0000"></label>
+        <label>메모<input id="o-memo" maxlength="200" placeholder="선호 연락 방식 등"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>반려견</legend>
+        <label>이름 *<input id="d-name" required maxlength="30"></label>
+        <label>견종 *<input id="d-breed" required maxlength="30" placeholder="예: 말티즈"></label>
+        <div class="row">
+          <label>체중(kg) *<input id="d-weight" type="number" step="0.1" min="0" max="100" required></label>
+          <label>나이/생년월<input id="d-age" maxlength="20" placeholder="예: 3살"></label>
+        </div>
+        <div class="row">
+          <label>중성화
+            <select id="d-neuter">
+              <option value="">모름</option>
+              <option value="함">함</option>
+              <option value="안 함">안 함</option>
+            </select>
+          </label>
+          <label>털 상태<input id="d-coat" maxlength="50" placeholder="예: 곱슬, 엉킴 잦음"></label>
+        </div>
+        <label>알레르기·피부 질환<input id="d-allergy" maxlength="200"></label>
+        <label>예방접종<input id="d-vacc" maxlength="100" placeholder="예: 2026-05 종합백신"></label>
+        <label>성격·주의사항 *<textarea id="d-temper" required maxlength="300" rows="2" placeholder="물림, 예민 부위 등 (없으면 '특이사항 없음')"></textarea></label>
+        <label>선호 스타일<input id="d-style" maxlength="200" placeholder="예: 전신 3mm, 얼굴 동글"></label>
+      </fieldset>
+
+      <div class="dlg-actions">
+        <button type="button" id="dlg-cancel">취소</button>
+        <button type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 예약 등록/수정 -->
+  <dialog id="res-dlg">
+    <form id="res-form" class="dlg-form" autocomplete="off">
+      <h2 id="res-dlg-title">예약 추가</h2>
+      <label>반려견 *<input id="res-dog-search" type="search" placeholder="이름·보호자·연락처로 검색"></label>
+      <ul id="res-dog-results" class="dog-results"></ul>
+      <p id="res-dog-picked" class="picked"></p>
+      <div class="row">
+        <label>날짜 *<input id="res-date" type="date" required></label>
+        <label>시작 시간 *<select id="res-start" required></select></label>
+      </div>
+      <label>소요시간 *<select id="res-minutes" required></select></label>
+      <label>메뉴<input id="res-menu" maxlength="50" placeholder="예: 목욕+부분컷"></label>
+      <label>메모<input id="res-memo" maxlength="200"></label>
+      <div class="dlg-actions">
+        <button type="button" id="res-cancel">취소</button>
+        <button type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 예약 상세 -->
+  <dialog id="res-view-dlg">
+    <div id="res-view-body" class="dlg-form"></div>
+  </dialog>
+
+  <!-- 예약 완료 → 미용 기록 -->
+  <dialog id="rec-dlg">
+    <form id="rec-dlg-form" class="dlg-form" autocomplete="off">
+      <h2 id="rec-dlg-title">미용 기록 저장</h2>
+      <div id="rd-pricing"></div>
+      <div class="row">
+        <label>방문일 *<input id="rd-date" type="date" required></label>
+        <label>시술 메뉴 *<input id="rd-menu" required maxlength="50"></label>
+      </div>
+      <label>날 길이/스타일<input id="rd-style" maxlength="100" placeholder="예: 3mm, 얼굴 동글"></label>
+      <div class="row">
+        <label>금액(원) *<input id="rd-price" type="number" min="0" step="1000" required></label>
+        <label>다음 방문 추천(주)<input id="rd-next" type="number" min="0" max="52" placeholder="예: 4"></label>
+      </div>
+      <div id="rd-balance"></div>
+      <label>특이사항<input id="rd-note" maxlength="300"></label>
+      <div class="row">
+        <label>전 사진<input id="rd-before" type="file" accept="image/*"></label>
+        <label>후 사진<input id="rd-after" type="file" accept="image/*"></label>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" id="rd-cancel">취소</button>
+        <button type="submit" class="primary">기록 저장 후 완료</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 충전금 충전 -->
+  <dialog id="mb-charge-dlg">
+    <form id="mb-charge-form" class="dlg-form" autocomplete="off">
+      <h2 id="mb-charge-title">충전하기</h2>
+      <div id="mb-products-pick" class="mb-pick"></div>
+      <div class="row">
+        <label>받은 금액(원)<input id="mb-pay" type="number" step="1000"></label>
+        <label>충전할 금액(원)<input id="mb-credit" type="number" step="1000"></label>
+      </div>
+      <div class="row">
+        <label>날짜<input id="mb-date" type="date" required></label>
+        <label>메모<input id="mb-memo" maxlength="100" placeholder="예: 카드 결제"></label>
+      </div>
+      <p id="mb-preview" class="mb-preview"></p>
+      <div class="dlg-actions">
+        <button type="button" id="mb-charge-cancel">취소</button>
+        <button type="submit" class="primary">충전</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 충전금 환불·조정 -->
+  <dialog id="mb-adjust-dlg">
+    <form id="mb-adjust-form" class="dlg-form" autocomplete="off">
+      <h2 id="mb-adjust-title">환불·조정</h2>
+      <label>종류
+        <select id="mb-kind">
+          <option value="refund">환불 (잔액에서 빼고 돈을 돌려줌)</option>
+          <option value="adjust">조정 (잘못 입력한 금액 정정 등)</option>
+        </select>
+      </label>
+      <label><span id="mb-amount-label">환불할 잔액(원)</span><input id="mb-amount" type="number" step="1000" required></label>
+      <label id="mb-paid-wrap">실제로 돌려준 금액(원) <span class="sub">비우면 위 금액과 같음</span><input id="mb-paid" type="number" step="1000"></label>
+      <label>사유<input id="mb-note" maxlength="100"></label>
+      <p id="mb-adjust-preview" class="mb-preview"></p>
+      <div class="dlg-actions">
+        <button type="button" id="mb-adjust-cancel">취소</button>
+        <button type="submit" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 동의서 서명 -->
+  <dialog id="cs-sign-dlg" class="cs-sign-dlg">
+    <form id="cs-sign-form" class="dlg-form" autocomplete="off">
+      <div id="cs-sign-head"></div>
+      <div id="cs-sign-docs"></div>
+      <label>서명하는 분 이름<input id="cs-signer" maxlength="30"></label>
+      <div class="cs-pad-wrap">
+        <canvas id="cs-pad" width="600" height="200" aria-label="서명 칸"></canvas>
+        <span id="cs-pad-hint">여기에 손가락으로 서명해주세요</span>
+      </div>
+      <div class="dlg-actions">
+        <button type="button" data-cs-action="clear">다시 쓰기</button>
+        <button type="button" id="cs-sign-cancel">취소</button>
+        <button type="submit" class="primary">동의하고 제출</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 동의서 보기 -->
+  <dialog id="cs-view-dlg" class="cs-sign-dlg">
+    <div class="dlg-form">
+      <div id="cs-view-content"></div>
+      <div class="dlg-actions">
+        <button type="button" data-cs-action="print">인쇄</button>
+        <button type="button" id="cs-view-close" class="primary">닫기</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 동의서 양식 고치기 -->
+  <dialog id="cs-tpl-dlg" class="cs-sign-dlg">
+    <form id="cs-tpl-form" class="dlg-form" autocomplete="off">
+      <h2>동의서 양식 고치기</h2>
+      <p class="muted">저장하면 새 버전이 되고, 이미 받은 동의서는 당시 문구 그대로 남아요. {가게}는 알림 탭에 넣은 가게 이름으로 바뀌어요.
+        개인정보 동의에는 수집 항목·목적·보관 기간·거부 권리와 거부 시 불이익이 꼭 들어가야 해요.</p>
+      <div id="cs-tpl-body"></div>
+      <div class="dlg-actions">
+        <button type="button" data-cs-action="tpl-default">기본 양식으로</button>
+        <button type="button" id="cs-tpl-cancel">취소</button>
+        <button type="submit" class="primary">저장(새 버전)</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 인쇄할 때만 보이는 영역 -->
+  <div id="print-area"></div>
+
+  <!-- 전/후 사진 보기 -->
+  <dialog id="photo-dlg" class="photo-dlg">
+    <div id="photo-body" class="dlg-form"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script src="reservations.js"></script>
+  <script src="stats.js"></script>
+  <script src="photos.js"></script>
+  <script src="pricing.js"></script>
+  <script src="notify.js"></script>
+  <script src="membership.js"></script>
+  <script src="consent.js"></script>
+</body>
+</html>
